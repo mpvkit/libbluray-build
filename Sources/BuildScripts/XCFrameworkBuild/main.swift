@@ -13,7 +13,7 @@ do {
 
 
 enum Library: String, CaseIterable {
-    case libbluray
+    case libbluray, libfreetype
     var version: String {
         switch self {
         case .libbluray:
