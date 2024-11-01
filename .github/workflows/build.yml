@@ -1,0 +1,85 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag name (default libbluray version)'
+        default: ''
+
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    runs-on: macos-14
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        brew install autoconf
+        brew install automake
+        brew install libtool
+        python -m pip install meson==1.4.2
+        brew install ninja
+
+    - name: Setup Xcode to support visionOS
+      run: |
+        sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+        xcodebuild -showsdks
+
+
+    - name: Check version to release
+      uses: jannekem/run-python-script-action@v1
+      with:
+        script: |
+          import re
+
+          def normalize_version(version_string):
+            version_string = re.sub(r'[^.0-9]+|-.+', '', version_string)
+            parts = re.split(r'\.', version_string)
+            major = int(parts[0])
+            minor = int(parts[1]) if len(parts) > 1 else 0
+            patch = int(parts[2]) if len(parts) > 2 else 0
+            return f"{major}.{minor}.{patch}"
+
+          file_path = './Sources/BuildScripts/XCFrameworkBuild/main.swift'
+          with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+          buildVersion = re.search(r'(case .libbluray[^"]+?)"(.+?)"', content).group(2)
+          print(f'build version: {buildVersion}')
+          releaseVersion = '${{ github.event.inputs.version }}' or normalize_version(buildVersion)
+          print(f'release version: {releaseVersion}')
+          set_env('BUILD_VERSION', buildVersion)
+          set_env('RELEASE_VERSION', releaseVersion)
+
+    - name: Build
+      run: |
+        make build version=${{ env.RELEASE_VERSION }}
+    
+    - name: Update Package.swift
+      run: |
+        rm -rf ./Package.swift
+        cp -f ./dist/release/Package.swift ./Package.swift
+        
+    - name: Push Package.swift
+      uses: EndBug/add-and-commit@v9
+      with:
+        default_author: github_actions
+        add: |
+          - Package.swift
+        message: "chore: bump version to ${{ env.BUILD_VERSION }}"
+        push: "origin HEAD:${{ github.ref_name }}"
+        
+    - name: Upload binary to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: ${{ contains(env.RELEASE_VERSION, '-') && env.RELEASE_VERSION || env.BUILD_VERSION }}
+        tag_name: ${{ env.RELEASE_VERSION }}
+        files: |
+          ./dist/release/*.txt
+          ./dist/release/*.zip
+        prerelease: ${{ contains(env.RELEASE_VERSION, '-') }}
+        generate_release_notes: true
+        fail_on_unmatched_files: true
