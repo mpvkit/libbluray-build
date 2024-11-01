@@ -13,7 +13,7 @@ do {
 
 
 enum Library: String, CaseIterable {
-    case libbluray, libfreetype
+    case libbluray,libfreetype
     var version: String {
         switch self {
         case .libbluray:
@@ -44,7 +44,7 @@ enum Library: String, CaseIterable {
                 ),
             ]
         default:
-            break
+            return []
         }
     }
 }
