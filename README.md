@@ -6,8 +6,6 @@ build scripts for [libbluray](https://code.videolan.org/videolan/libbluray)
 
 ### Swift Package Manager
 
-Not work on macCatalyst platform
-
 ```
 https://github.com/mpvkit/libbluray-build.git
 ```
