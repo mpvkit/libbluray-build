@@ -4,6 +4,7 @@ do {
     let options = try ArgumentOptions.parse(CommandLine.arguments)
     try Build.performCommand(options)
 
+    try BuildFreetype().buildALL()
     try BuildBluray().buildALL()
 } catch {
     print("ERROR: \(error.localizedDescription)")
@@ -17,6 +18,8 @@ enum Library: String, CaseIterable {
         switch self {
         case .libbluray:
             return "1.3.4"
+        case .libfreetype:
+            return "0.17.3"
         }
     }
 
@@ -24,6 +27,8 @@ enum Library: String, CaseIterable {
         switch self {
         case .libbluray:
             return "https://code.videolan.org/videolan/libbluray.git"
+        case .libfreetype:
+            return "https://github.com/mpvkit/libass-build/releases/download/\(self.version)/libfreetype-all.zip"
         }
     }
 
@@ -115,3 +120,9 @@ private class BuildBluray: BaseBuild {
     }
 }
 
+
+private class BuildFreetype: ZipBaseBuild {
+    init() {
+        super.init(library: .libfreetype)
+    }
+}
