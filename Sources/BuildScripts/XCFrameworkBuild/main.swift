@@ -43,6 +43,8 @@ enum Library: String, CaseIterable {
                     checksum: "https://github.com/mpvkit/libbluray-build/releases/download/\(BaseBuild.options.releaseVersion)/Libbluray.xcframework.checksum.txt"
                 ),
             ]
+        default:
+            break
         }
     }
 }
