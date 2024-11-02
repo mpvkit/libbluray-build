@@ -13,7 +13,7 @@ let package = Package(
         // https://github.com/apple/swift-package-manager/issues/6069
         .target(
             name: "_Libbluray",
-            dependencies: ["Libbluray"],
+            dependencies: ["Libbluray", "Libudfread"],
             path: "Sources/_Dummy"
         ),
         //AUTO_GENERATE_TARGETS_BEGIN//
@@ -21,7 +21,7 @@ let package = Package(
         .binaryTarget(
             name: "Libbluray",
             url: "https://github.com/mpvkit/libbluray-build/releases/download/1.3.4/Libbluray.xcframework.zip",
-            checksum: "f3f50ca2948f9983247c3d00faee92aab168501579edcf610d80312a252e5ff5"
+            checksum: "97d8cd1405c75594615150c329eb6aa766c3ab61825e5195f45efc0ec2bf240f"
         ),
         //AUTO_GENERATE_TARGETS_END//
     ]
