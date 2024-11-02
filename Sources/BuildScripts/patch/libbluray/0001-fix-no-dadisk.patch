@@ -1,29 +1,33 @@
-diff --git a/src/file/mount_darwin.c b/src/file/mount_darwin.c
-index 5b13450..930df04 100644
---- a/src/file/mount_darwin.c
-+++ b/src/file/mount_darwin.c
-@@ -30,13 +30,12 @@
+diff --git forkSrcPrefix/src/file/mount_darwin.c forkDstPrefix/src/file/mount_darwin.c
+index 5b13450e973fca6f44efee5111fa49ac71b65436..dbfa99754f1479094032c0ec829da8ed8011af0a 100644
+--- forkSrcPrefix/src/file/mount_darwin.c
++++ forkDstPrefix/src/file/mount_darwin.c
+@@ -29,13 +29,17 @@
+ 
  #define _DARWIN_C_SOURCE
  #include <sys/stat.h>
- 
--#include <DiskArbitration/DADisk.h>
-+//#include <DiskArbitration/DADisk.h>
+-
++#ifdef __APPLE__
++#ifndef __IPHONE_OS__
+ #include <DiskArbitration/DADisk.h>
++#endif
++#endif
  
  static char *bsdname_get_mountpoint(const char *device_path)
  {
      char *result = NULL;
 -
--    DASessionRef session = DASessionCreate(kCFAllocatorDefault);
-+    /*DASessionRef session = DASessionCreate(kCFAllocatorDefault);
++    #ifdef __APPLE__
++    #ifndef __IPHONE_OS__
+     DASessionRef session = DASessionCreate(kCFAllocatorDefault);
      if (session) {
          DADiskRef disk = DADiskCreateFromBSDName(kCFAllocatorDefault, session, device_path);
-         if (disk) {
-@@ -56,7 +55,7 @@ static char *bsdname_get_mountpoint(const char *device_path)
-             CFRelease(disk);
+@@ -57,6 +61,8 @@ static char *bsdname_get_mountpoint(const char *device_path)
          }
          CFRelease(session);
--    }
-+    }*/
+     }
++    #endif
++    #endif
  
      return result;
  }

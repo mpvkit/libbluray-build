@@ -13,7 +13,7 @@ let package = Package(
         // https://github.com/apple/swift-package-manager/issues/6069
         .target(
             name: "_Libbluray",
-            dependencies: ["Libbluray"],
+            dependencies: ["Libbluray", "Libudfread"],
             path: "Sources/_Dummy"
         ),
         //AUTO_GENERATE_TARGETS_BEGIN//
