@@ -51,7 +51,7 @@ enum Library: String, CaseIterable {
         case .libudfread:
             return  [
                 .target(
-                    name: "Libbluray",
+                    name: "Libudfread",
                     url: "https://github.com/mpvkit/libbluray-build/releases/download/\(BaseBuild.options.releaseVersion)/Libudfread.xcframework.zip",
                     checksum: "https://github.com/mpvkit/libbluray-build/releases/download/\(BaseBuild.options.releaseVersion)/Libudfread.xcframework.checksum.txt"
                 ),
