@@ -48,14 +48,6 @@ enum Library: String, CaseIterable {
                     checksum: "https://github.com/mpvkit/libbluray-build/releases/download/\(BaseBuild.options.releaseVersion)/Libbluray.xcframework.checksum.txt"
                 ),
             ]
-        case .libudfread:
-            return  [
-                .target(
-                    name: "Libudfread",
-                    url: "https://github.com/mpvkit/libbluray-build/releases/download/\(BaseBuild.options.releaseVersion)/Libudfread.xcframework.zip",
-                    checksum: "https://github.com/mpvkit/libbluray-build/releases/download/\(BaseBuild.options.releaseVersion)/Libudfread.xcframework.checksum.txt"
-                ),
-            ]
         default:
             return []
         }
