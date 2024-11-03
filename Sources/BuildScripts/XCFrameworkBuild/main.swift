@@ -4,8 +4,8 @@ do {
     let options = try ArgumentOptions.parse(CommandLine.arguments)
     try Build.performCommand(options)
 
+    try BuildOpenSSL().buildALL()
     try BuildFreetype().buildALL()
-    try BuildUdfread().buildALL()
     try BuildBluray().buildALL()
 } catch {
     print("ERROR: \(error.localizedDescription)")
@@ -14,13 +14,13 @@ do {
 
 
 enum Library: String, CaseIterable {
-    case libbluray, libudfread, libfreetype
+    case libbluray, openssl, libfreetype
     var version: String {
         switch self {
         case .libbluray:
             return "1.3.4"
-        case .libudfread:
-            return "1.1.2"
+        case .openssl:
+            return "3.2.0"
         case .libfreetype:
             return "0.17.3"
         }
@@ -30,8 +30,8 @@ enum Library: String, CaseIterable {
         switch self {
         case .libbluray:
             return "https://code.videolan.org/videolan/libbluray.git"
-        case .libudfread:
-            return "https://code.videolan.org/videolan/libudfread.git"
+        case .openssl:
+            return "https://github.com/mpvkit/openssl-build/releases/download/\(self.version)/openssl-all.zip"
         case .libfreetype:
             return "https://github.com/mpvkit/libass-build/releases/download/\(self.version)/libfreetype-all.zip"
         }
@@ -91,22 +91,9 @@ private class BuildBluray: BaseBuild {
     }
 }
 
-private class BuildUdfread: BaseBuild {
+private class BuildOpenSSL: ZipBaseBuild {
     init() {
-        super.init(library: .libudfread)
-
-        self.pullLatestVersion = true
-    }
-
-    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
-        [
-            "--with-pic",
-            "--enable-static",
-            "--disable-shared",
-            "--disable-fast-install",
-            "--disable-dependency-tracking",
-            "--host=\(platform.host(arch: arch))",
-        ]
+        super.init(library: .openssl)
     }
 }
 
