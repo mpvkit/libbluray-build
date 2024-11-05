@@ -21,7 +21,7 @@ let package = Package(
         .binaryTarget(
             name: "Libbluray",
             url: "https://github.com/mpvkit/libbluray-build/releases/download/1.3.4/Libbluray.xcframework.zip",
-            checksum: "b735d67ea3fa60e2fbbb27d6554aafabc92e70c2bb3cfda9261ab66685c17b0e"
+            checksum: "0afbcad73d1c159974aa7bbedc6fed18712f10dd6d84779ffee9b31dac1bef45"
         ),
         //AUTO_GENERATE_TARGETS_END//
     ]
