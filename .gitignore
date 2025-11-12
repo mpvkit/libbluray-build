@@ -44,7 +44,6 @@ playground.xcworkspace
 # Package.resolved
 .build/
 .swiftpm/
-.vscode/
 
 # CocoaPods
 #
@@ -119,4 +118,4 @@ temp/
 dist/
 *.log
 *.xcframework
-*.zip
+.vscode

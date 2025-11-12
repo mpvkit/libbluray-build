@@ -2,8 +2,8 @@ name: Check new version
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 1 * *' # every month first day
+  # schedule:
+  #   - cron: '0 0 1 * *' # every month first day
 
 jobs:
   build:
@@ -43,6 +43,7 @@ jobs:
               content = file.read()
             oldVersion = re.search(r'(case .libbluray[^"]+?)"(.+?)"', content).group(2)
             print("old version:", oldVersion)
+            set_env('OLD_VERSION', oldVersion)
             newVersion = '${{ env.LATEST_VERSION }}'
             print("new version:", newVersion)
             if parse_version(newVersion) > parse_version(oldVersion):
@@ -59,5 +60,6 @@ jobs:
           add-paths: |
             ./Sources/BuildScripts/XCFrameworkBuild/main.swift
           title: "bump version to ${{ env.LATEST_VERSION }}"
-          body: "https://code.videolan.org/videolan/libbluray/-/blob/${{ env.LATEST_VERSION }}/ChangeLog?ref_type=tags\n"
+          body: |
+            https://code.videolan.org/videolan/libbluray/-/blob/${{ env.LATEST_VERSION }}/ChangeLog?ref_type=tags
           commit-message: "chore: bump version to ${{ env.LATEST_VERSION }}"

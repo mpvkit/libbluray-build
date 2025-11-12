@@ -91,7 +91,7 @@ class ArgumentOptions {
 }
 
 class BaseBuild {
-    static let defaultPath = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    static let defaultPath = "/Library/Frameworks/Python.framework/Versions/Current/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     static var platforms = PlatformType.allCases
     static var options = ArgumentOptions()
     static let splitPlatformGroups = [
@@ -425,7 +425,63 @@ class BaseBuild {
         """
         FileManager.default.createFile(atPath: frameworkDir.path + "/Modules/module.modulemap", contents: modulemap.data(using: .utf8), attributes: nil)
         createPlist(path: frameworkDir.path + "/Info.plist", name: framework, minVersion: platform.minVersion, platform: platform.sdk)
+        try fixShallowBundles(framework: framework, platform: platform, frameworkDir: frameworkDir)
         return frameworkDir.path
+    }
+
+    // Fix shallow bundles for Xcode 26, only for macOS frameworks
+    func fixShallowBundles(framework: String, platform: PlatformType, frameworkDir: URL) throws {
+        guard platform == .macos else { return }
+
+        let infoPlistPath = frameworkDir + "Info.plist"
+        let versionsPath = frameworkDir + "Versions"
+        
+        // Check if this is a shallow bundle that needs fixing
+        var isDirectory: ObjCBool = false
+        let frameworkExists = FileManager.default.fileExists(atPath: frameworkDir.path, isDirectory: &isDirectory)
+        let hasInfoPlist = FileManager.default.fileExists(atPath: infoPlistPath.path)
+        let hasVersions = FileManager.default.fileExists(atPath: versionsPath.path, isDirectory: &isDirectory) && isDirectory.boolValue
+        
+        if frameworkExists && hasInfoPlist && !hasVersions {
+            print("Fixing \(framework).framework bundle structure...")
+            
+            // Create proper bundle structure
+            let versionAResourcesPath = frameworkDir + ["Versions", "A", "Resources"]
+            try FileManager.default.createDirectory(at: versionAResourcesPath, withIntermediateDirectories: true, attributes: nil)
+            
+            // Move Info.plist to proper location
+            let newInfoPlistPath = versionAResourcesPath + "Info.plist"
+            try FileManager.default.moveItem(at: infoPlistPath, to: newInfoPlistPath)
+            
+            // Move framework binary to proper location
+            let binaryPath = frameworkDir + framework
+            let newBinaryPath = frameworkDir + ["Versions", "A", framework]
+            if FileManager.default.fileExists(atPath: binaryPath.path) {
+                try FileManager.default.moveItem(at: binaryPath, to: newBinaryPath)
+            }
+            
+            // Move LICENSE if exists
+            let licensePath = frameworkDir + "LICENSE"
+            if FileManager.default.fileExists(atPath: licensePath.path) {
+                let newLicensePath = frameworkDir + ["Versions", "A", "LICENSE"]
+                try FileManager.default.moveItem(at: licensePath, to: newLicensePath)
+            }
+            
+            // Create symbolic links
+            let currentLinkPath = frameworkDir + ["Versions", "Current"]
+            try? FileManager.default.removeItem(at: currentLinkPath)
+            try FileManager.default.createSymbolicLink(atPath: currentLinkPath.path, withDestinationPath: "A")
+            
+            let binaryLinkPath = frameworkDir + framework
+            try? FileManager.default.removeItem(at: binaryLinkPath)
+            try FileManager.default.createSymbolicLink(atPath: binaryLinkPath.path, withDestinationPath: "Versions/Current/\(framework)")
+            
+            let resourcesLinkPath = frameworkDir + "Resources"
+            try? FileManager.default.removeItem(at: resourcesLinkPath)
+            try FileManager.default.createSymbolicLink(atPath: resourcesLinkPath.path, withDestinationPath: "Versions/Current/Resources")
+            
+            print("\(framework).framework structure fixed")
+        }
     }
 
     func thinDir(library: Library, platform: PlatformType, arch: ArchType) -> URL {
@@ -595,14 +651,19 @@ class BaseBuild {
             }
         }
         for framework in frameworks {
-            // clean old files
-            try Utility.launch(path: "/bin/rm", arguments: ["-rf", "\(framework)*.xcframework.zip"], currentDirectoryURL: releaseDirPath)
-            try Utility.launch(path: "/bin/rm", arguments: ["-rf", "\(framework)*.checksum.txt"], currentDirectoryURL: releaseDirPath)
+            // clean old zip files
+            let directoryContents = try FileManager.default.contentsOfDirectory(atPath: releaseDirPath.path)
+            for item in directoryContents {
+                if item.hasPrefix(framework) && (item.hasSuffix(".xcframework.zip") || item.hasSuffix(".checksum.txt")) {
+                    let itemPath = releaseDirPath.appendingPathComponent(item)
+                    try? FileManager.default.removeItem(at: itemPath)
+                }
+            }
 
             let XCFrameworkFile =  framework + ".xcframework"
             let zipFile = releaseDirPath + [framework + ".xcframework.zip"]
             let checksumFile = releaseDirPath + [framework + ".xcframework.checksum.txt"]
-            try Utility.launch(path: "/usr/bin/zip", arguments: ["-qr", zipFile.path, XCFrameworkFile], currentDirectoryURL: self.xcframeworkDirectoryURL)
+            try Utility.launch(path: "/usr/bin/zip", arguments: ["-qry", zipFile.path, XCFrameworkFile], currentDirectoryURL: self.xcframeworkDirectoryURL)
             Utility.shell("swift package compute-checksum \(zipFile.path) > \(checksumFile.path)")
 
             if BaseBuild.options.enableSplitPlatform {
@@ -613,7 +674,7 @@ class BaseBuild {
                     if FileManager.default.fileExists(atPath: XCFrameworkPath.path) {
                         let zipFile = releaseDirPath + [XCFrameworkName + ".xcframework.zip"]
                         let checksumFile = releaseDirPath + [XCFrameworkName + ".xcframework.checksum.txt"]
-                        try Utility.launch(path: "/usr/bin/zip", arguments: ["-qr", zipFile.path, XCFrameworkFile], currentDirectoryURL: self.xcframeworkDirectoryURL)
+                        try Utility.launch(path: "/usr/bin/zip", arguments: ["-qry", zipFile.path, XCFrameworkFile], currentDirectoryURL: self.xcframeworkDirectoryURL)
                         Utility.shell("swift package compute-checksum \(zipFile.path) > \(checksumFile.path)")
                     }
                 }
@@ -1106,11 +1167,6 @@ enum Utility {
         }
         if !environment.keys.contains("PATH") {
             environment["PATH"] = BaseBuild.defaultPath
-
-            // meson need to use pip version on GITHUB ACTION, use brew version will build failed
-            if ProcessInfo.processInfo.environment.keys.contains("GITHUB_ACTION") {
-                environment["PATH"] = "/Library/Frameworks/Python.framework/Versions/Current/bin:" + environment["PATH"]!
-            }
         }
         task.environment = environment
 
@@ -1190,6 +1246,20 @@ enum Utility {
             if let logURL = logURL {
                 // print log when run in GitHub Action
                 if ProcessInfo.processInfo.environment.keys.contains("GITHUB_ACTION") {
+                    // if build FFmpeg failed, print the ffbuild/config.log content
+                    if logURL.path.contains("FFmpeg") {
+                        let ffbuildLogURL = logURL
+                            .deletingPathExtension()
+                            .appendingPathComponent("ffbuild/config.log")
+                        if FileManager.default.fileExists(atPath: ffbuildLogURL.path) {
+                            if let content = String(data: try Data(contentsOf: ffbuildLogURL), encoding: .utf8) {
+                                print("############# \(ffbuildLogURL) CONTENT BEGIN #############")
+                                print(content)
+                                print("#############  \(ffbuildLogURL) CONTENT END #############")
+                            }
+                        }
+                    }
+
                     if let content = String(data: try Data(contentsOf: logURL), encoding: .utf8) {
                         print("############# \(logURL) CONTENT BEGIN #############")
                         print(content)
