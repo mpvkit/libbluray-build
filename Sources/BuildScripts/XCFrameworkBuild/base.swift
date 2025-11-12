@@ -229,6 +229,7 @@ class BaseBuild {
                 "-DCMAKE_SYSTEM_PROCESSOR=\(arch.rawValue)",
                 "-DCMAKE_INSTALL_PREFIX=\(thinDirPath)",
                 "-DBUILD_SHARED_LIBS=0",
+                "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
             ]
             arguments.append(contentsOf: self.arguments(platform: platform, arch: arch))
             try Utility.launch(path: cmake, arguments: arguments, currentDirectoryURL: buildURL, environment: environ)
@@ -424,7 +425,10 @@ class BaseBuild {
         }
         """
         FileManager.default.createFile(atPath: frameworkDir.path + "/Modules/module.modulemap", contents: modulemap.data(using: .utf8), attributes: nil)
-        createPlist(path: frameworkDir.path + "/Info.plist", name: framework, minVersion: platform.minVersion, platform: platform.sdk)
+        // Setting the minimum version to 100.0 is required for uploading a static framework to the App Store after Xcode 15.4
+        // Fix: ITMS-90208: "Invalid Bundle. The bundle xxx.framework does not support the minimum OS Version specified in the Info.plist."
+        // It was originally using `platform.minVersion`
+        createPlist(path: frameworkDir.path + "/Info.plist", name: framework, minVersion: "100.0", platform: platform.sdk)
         try fixShallowBundles(framework: framework, platform: platform, frameworkDir: frameworkDir)
         return frameworkDir.path
     }
@@ -652,13 +656,8 @@ class BaseBuild {
         }
         for framework in frameworks {
             // clean old zip files
-            let directoryContents = try FileManager.default.contentsOfDirectory(atPath: releaseDirPath.path)
-            for item in directoryContents {
-                if item.hasPrefix(framework) && (item.hasSuffix(".xcframework.zip") || item.hasSuffix(".checksum.txt")) {
-                    let itemPath = releaseDirPath.appendingPathComponent(item)
-                    try? FileManager.default.removeItem(at: itemPath)
-                }
-            }
+            try? FileManager.default.removeItem(at: releaseDirPath + [framework + ".xcframework.zip"])
+            try? FileManager.default.removeItem(at: releaseDirPath + [framework + ".xcframework.checksum.txt"])
 
             let XCFrameworkFile =  framework + ".xcframework"
             let zipFile = releaseDirPath + [framework + ".xcframework.zip"]
@@ -669,6 +668,11 @@ class BaseBuild {
             if BaseBuild.options.enableSplitPlatform {
                 for group in BaseBuild.splitPlatformGroups.keys {
                     let XCFrameworkName =  "\(framework)-\(group)"
+                    
+                    // clean old zip files
+                    try? FileManager.default.removeItem(at: releaseDirPath + [XCFrameworkName + ".xcframework.zip"])
+                    try? FileManager.default.removeItem(at: releaseDirPath + [XCFrameworkName + ".xcframework.checksum.txt"])
+                    
                     let XCFrameworkFile =  XCFrameworkName + ".xcframework"
                     let XCFrameworkPath = self.xcframeworkDirectoryURL + ["\(framework)-\(group).xcframework"]
                     if FileManager.default.fileExists(atPath: XCFrameworkPath.path) {
@@ -909,20 +913,20 @@ enum PlatformType: String, CaseIterable {
     var frameworkName: String {
         switch self {
         case .ios:
-            return "ios-arm64"
+            return "ios-arm64_arm64e"
         case .maccatalyst:
-            return "ios-arm64_x86_64-maccatalyst"
+            return "ios-arm64_arm64e_x86_64-maccatalyst"
         case .isimulator:
             return "ios-arm64_x86_64-simulator"
         case .macos:
-            return "macos-arm64_x86_64"
+            return "macos-arm64_arm64e_x86_64"
         case .tvos:
             // 保持和xcode一致：https://github.com/KhronosGroup/MoltenVK/issues/431#issuecomment-771137085
             return "tvos-arm64_arm64e"
         case .tvsimulator:
             return "tvos-arm64_x86_64-simulator"
         case .xros:
-            return "xros-arm64"
+            return "xros-arm64_arm64e"
         case .xrsimulator:
             return "xros-arm64_x86_64-simulator"
         }
@@ -932,7 +936,7 @@ enum PlatformType: String, CaseIterable {
     var architectures: [ArchType] {
         switch self {
         case .ios, .xros:
-            return [.arm64]
+            return [.arm64, .arm64e]
         case .tvos:
             return [.arm64, .arm64e]
         case .xrsimulator:
@@ -942,12 +946,12 @@ enum PlatformType: String, CaseIterable {
         case .macos:
             // macos 不能用arm64，不然打包release包会报错，不能通过
             #if arch(x86_64)
-            return [.x86_64, .arm64]
+            return [.x86_64, .arm64, .arm64e]
             #else
-            return [.arm64, .x86_64]
+            return [.arm64, .arm64e, .x86_64]
             #endif
         case .maccatalyst:
-            return [.arm64, .x86_64]
+            return [.arm64, .arm64e, .x86_64]
         }
     }
 
