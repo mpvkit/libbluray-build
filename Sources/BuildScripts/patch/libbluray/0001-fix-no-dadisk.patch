@@ -31,3 +31,21 @@ index 5b13450e973fca6f44efee5111fa49ac71b65436..4cfdafcb99418efbc1a1c5bbe88c2c0a
  
      return result;
  }
+diff --git forkSrcPrefix/meson.build forkDstPrefix/meson.build
+index 08a47e05e194aeb56ff10fc2a42f631ef7c85e8f..833988b684a47efca74c26a067e385eed2500ce8 100644
+--- forkSrcPrefix/meson.build
++++ forkDstPrefix/meson.build
+@@ -52,7 +52,12 @@ endif
+ 
+ if host_machine.system() == 'darwin'
+     extra_dependencies += dependency('appleframeworks',
+-        modules: ['CoreFoundation', 'DiskArbitration'])
++        modules: ['CoreFoundation'])
++    # Only add DiskArbitration framework if headers are available (macOS systems)
++    if cc.has_header('DiskArbitration/DiskArbitration.h')
++        extra_dependencies += dependency('appleframeworks',
++            modules: ['DiskArbitration'])
++    endif
+ elif host_machine.system() == 'netbsd'
+     test_args += '-D_NETBSD_SOURCE'
+ elif host_machine.system() == 'openbsd'

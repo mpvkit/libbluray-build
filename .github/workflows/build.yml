@@ -84,4 +84,4 @@ jobs:
         generate_release_notes: true
         fail_on_unmatched_files: true
         body: |
-          ![download](https://img.shields.io/github/downloads/${{ github.repository }}/${{ env.RELEASE_VERSION }}/total?label=Downloads)
+          https://code.videolan.org/videolan/libbluray/-/tree/${{ env.BUILD_VERSION }}?ref_type=tags
