@@ -20,9 +20,9 @@ enum Library: String, CaseIterable {
         case .libbluray:
             return "1.4.0"
         case .openssl:
-            return "3.3.2-xcode"
+            return "3.3.5"
         case .libfreetype:
-            return "0.17.3-xcode"
+            return "0.17.4"
         }
     }
 
