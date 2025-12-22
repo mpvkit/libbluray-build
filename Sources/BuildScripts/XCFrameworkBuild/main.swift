@@ -65,20 +65,16 @@ private class BuildBluray: BaseBuild {
 
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         [
-            "--disable-doxygen-doc",
-            "--disable-doxygen-dot",
-            "--disable-doxygen-html",
-            "--disable-doxygen-ps",
-            "--disable-doxygen-pdf",
-            "--disable-examples",
-            "--disable-bdjava-jar",
-            "--without-fontconfig",
-            "--with-pic",
-            "--enable-static",
-            "--disable-shared",
-            "--disable-fast-install",
-            "--disable-dependency-tracking",
-            "--host=\(platform.host(arch: arch))",
+            "-Denable_docs=false",
+            "-Denable_tools=false", 
+            "-Denable_devtools=false", 
+            "-Denable_examples=false",
+            "-Dbdj_jar=disabled",
+            "-Djava9=false",
+            "-Dembed_udfread=true",
+            "-Dfontconfig=disabled",
+            "-Dfreetype=enabled",
+            "-Dlibxml2=enabled",
         ]
     }
 }
