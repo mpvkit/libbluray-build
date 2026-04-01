@@ -10,10 +10,71 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: mpvkit/BuildShared/.github/workflows/check_version.yml@main
-    secrets: inherit
-    with:
-      repository: 'videolan/libbluray'
-      library: 'libbluray'
-      pr_body: |
-        {REPOSITORY_URL}/-/blob/{NEW_VERSION}/ChangeLog?ref_type=tags
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Checkout latest code
+        run: |
+          git clone --quiet https://code.videolan.org/videolan/libbluray.git latest_code
+          cd ./latest_code
+          git fetch --tags --quiet
+
+      - name: Get latest verion
+        run: |
+          cd ./latest_code
+          latest_tag=$(git tag --sort=-v:refname | grep -v "-" | grep -v "_" | head -n 1)
+          echo "latest tag: $latest_tag"
+          echo "NEW_VERSION=$latest_tag" >> $GITHUB_ENV
+          rm -rf ../latest_code
+
+      - name: update to new version
+        run: |
+          python3 << 'PY'
+          import re
+          import os
+
+          def parse_version(ver):
+            if '-' in ver or ver == '':
+              return 0
+            return int(re.sub(r'[^0-9]+', r'', ver))
+
+          file_path = './Sources/BuildScripts/XCFrameworkBuild/main.swift'
+          with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+          oldVersion = re.search(r'(case .libbluray[^\"]+?)"(.+?)"', content).group(2)
+          print("old version:", oldVersion)
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
+            f.write(f"OLD_VERSION={oldVersion}\n")
+          newVersion = os.environ.get('NEW_VERSION', '')
+          print("new version:", newVersion)
+          if parse_version(newVersion) > parse_version(oldVersion):
+            content = re.sub(r'(case .libbluray[^\"]+?)"(.+?)"', rf'\1"{newVersion}"', content, count=1)
+            with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
+              f.write("FOUND_NEW_VERSION=1\n")
+            with open(file_path, 'w', encoding='utf-8') as file:
+              file.write(content)
+          PY
+
+      - name: Prepare PR body
+        run: |
+          python3 << 'PY'
+          import os
+
+          repo_url = 'https://code.videolan.org/videolan/libbluray'
+          new = os.environ.get('NEW_VERSION', '')
+          pr_body = f"{repo_url}/-/blob/{new}/ChangeLog?ref_type=tags"
+
+          with open('/tmp/PR_BODY.txt', 'w', encoding='utf-8') as f:
+              f.write(pr_body)
+          PY
+
+      - name: Create Pull Request
+        if: env.FOUND_NEW_VERSION
+        uses: peter-evans/create-pull-request@v7
+        with:
+          add-paths: |
+            ./Sources/BuildScripts/XCFrameworkBuild/main.swift
+          title: "bump version to ${{ env.NEW_VERSION }}"
+          body-path: /tmp/PR_BODY.txt
+          commit-message: "chore: bump version to ${{ env.NEW_VERSION }}"
