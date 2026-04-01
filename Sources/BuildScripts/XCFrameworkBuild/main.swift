@@ -18,7 +18,7 @@ enum Library: String, CaseIterable, BuildLibrary {
     var version: String {
         switch self {
         case .libbluray:
-            return "1.4.0"
+            return "1.4.1"
         case .openssl:
             return "3.3.5"
         case .libfreetype:
