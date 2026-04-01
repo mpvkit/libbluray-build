@@ -7,6 +7,9 @@ on:
 
 jobs:
   check_version:
+    permissions:
+      contents: write
+      pull-requests: write
     uses: mpvkit/BuildShared/.github/workflows/check_version.yml@main
     secrets: inherit
     with:

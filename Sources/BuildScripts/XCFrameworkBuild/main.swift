@@ -8,7 +8,7 @@ do {
     try BuildFreetype(options: options).buildALL()
     try BuildBluray(options: options).buildALL()
 } catch {
-    print(error.localizedDescription)
+    print("ERROR: \(error.localizedDescription)")
     exit(1)
 }
 
@@ -41,11 +41,12 @@ enum Library: String, CaseIterable, BuildLibrary {
     var targets : [PackageTarget] {
         switch self {
         case .libbluray:
+            let releaseVersion = BuildRunner.options?.releaseVersion ?? Library.libbluray.version
             return  [
                 .target(
                     name: "Libbluray",
-                    url: "https://github.com/mpvkit/libbluray-build/releases/download/\(BuildRunner.options!.releaseVersion)/Libbluray.xcframework.zip",
-                    checksum: "https://github.com/mpvkit/libbluray-build/releases/download/\(BuildRunner.options!.releaseVersion)/Libbluray.xcframework.checksum.txt"
+                    url: "https://github.com/mpvkit/libbluray-build/releases/download/\(releaseVersion)/Libbluray.xcframework.zip",
+                    checksum: "https://github.com/mpvkit/libbluray-build/releases/download/\(releaseVersion)/Libbluray.xcframework.checksum.txt"
                 ),
             ]
         default:
