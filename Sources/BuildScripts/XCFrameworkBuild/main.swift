@@ -1,19 +1,19 @@
 import Foundation
+import BuildShared
 
 do {
-    let options = try ArgumentOptions.parse(CommandLine.arguments)
-    try Build.performCommand(options)
+    let options = try BuildRunner.performCommand()
 
-    try BuildOpenSSL().buildALL()
-    try BuildFreetype().buildALL()
-    try BuildBluray().buildALL()
+    try BuildOpenSSL(options: options).buildALL()
+    try BuildFreetype(options: options).buildALL()
+    try BuildBluray(options: options).buildALL()
 } catch {
-    print("ERROR: \(error.localizedDescription)")
+    print(error.localizedDescription)
     exit(1)
 }
 
 
-enum Library: String, CaseIterable {
+enum Library: String, CaseIterable, BuildLibrary {
     case libbluray, openssl, libfreetype
     var version: String {
         switch self {
@@ -44,8 +44,8 @@ enum Library: String, CaseIterable {
             return  [
                 .target(
                     name: "Libbluray",
-                    url: "https://github.com/mpvkit/libbluray-build/releases/download/\(BaseBuild.options.releaseVersion)/Libbluray.xcframework.zip",
-                    checksum: "https://github.com/mpvkit/libbluray-build/releases/download/\(BaseBuild.options.releaseVersion)/Libbluray.xcframework.checksum.txt"
+                    url: "https://github.com/mpvkit/libbluray-build/releases/download/\(BuildRunner.options!.releaseVersion)/Libbluray.xcframework.zip",
+                    checksum: "https://github.com/mpvkit/libbluray-build/releases/download/\(BuildRunner.options!.releaseVersion)/Libbluray.xcframework.checksum.txt"
                 ),
             ]
         default:
@@ -56,8 +56,8 @@ enum Library: String, CaseIterable {
 
 
 private class BuildBluray: BaseBuild {
-    init() {
-        super.init(library: .libbluray)
+    init(options: ArgumentOptions) {
+        super.init(library: Library.libbluray, options: options)
 
         // 只能 macos 支持 DiskArbitration 框架，其他平台需要注释去掉 DiskArbitration 依赖
     }
@@ -80,13 +80,13 @@ private class BuildBluray: BaseBuild {
 }
 
 private class BuildOpenSSL: ZipBaseBuild {
-    init() {
-        super.init(library: .openssl)
+    init(options: ArgumentOptions) {
+        super.init(library: Library.openssl, options: options)
     }
 }
 
 private class BuildFreetype: ZipBaseBuild {
-    init() {
-        super.init(library: .libfreetype)
+    init(options: ArgumentOptions) {
+        super.init(library: Library.libfreetype, options: options)
     }
 }

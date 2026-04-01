@@ -119,3 +119,4 @@ dist/
 *.log
 *.xcframework
 .vscode
+Sources/BuildScripts/Package.resolved

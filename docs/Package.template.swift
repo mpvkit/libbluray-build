@@ -4,9 +4,12 @@ import PackageDescription
 
 let package = Package(
     name: "libbluray",
-    platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13)],
+    platforms: [.macOS(.v11), .iOS(.v14), .tvOS(.v14)],
     products: [
-        .library(name: "Libbluray", targets: ["_Libbluray"]),
+        .library(
+            name: "Libbluray",
+            targets: ["_Libbluray"]
+        ),
     ],
     targets: [
         // Need a dummy target to embedded correctly.
