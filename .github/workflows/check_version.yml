@@ -13,7 +13,7 @@ jobs:
     uses: mpvkit/BuildShared/.github/workflows/check_version.yml@main
     secrets: inherit
     with:
-      repository: 'videolan/libbluray'
+      repository: 'https://code.videolan.org/videolan/libbluray.git'
       library: 'libbluray'
       pr_body: |
         {REPOSITORY_URL}/-/blob/{NEW_VERSION}/ChangeLog?ref_type=tags
