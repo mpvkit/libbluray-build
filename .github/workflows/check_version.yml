@@ -10,81 +10,10 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Checkout latest code
-        run: |
-          git clone --quiet https://code.videolan.org/videolan/libbluray.git latest_code
-          cd ./latest_code
-          git fetch --tags --quiet
-
-      - name: Get latest version
-        run: |
-          cd ./latest_code
-          latest_tag=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
-          if [ -z "$latest_tag" ]; then
-            echo "No stable tag found in upstream repository"
-            exit 1
-          fi
-          echo "latest tag: $latest_tag"
-          echo "NEW_VERSION=$latest_tag" >> $GITHUB_ENV
-
-      - name: update to new version
-        run: |
-          python3 << 'PY'
-          import re
-          import os
-
-          def parse_version(ver):
-            if ver is None:
-              raise ValueError("invalid version: None")
-            match = re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)', ver)
-            if match is None:
-              raise ValueError(f"invalid version: {ver!r}")
-            return tuple(int(part) for part in match.groups())
-
-          file_path = './Sources/BuildScripts/XCFrameworkBuild/main.swift'
-          with open(file_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-          pattern = r'(case\s+\.libbluray:\s*return\s+)"([^"]+)"'
-          match = re.search(pattern, content)
-          if match is None:
-            raise RuntimeError(f"failed to find version with pattern {pattern!r} in {file_path}")
-          old_version = match.group(2)
-          print("old version:", old_version)
-          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
-            f.write(f"OLD_VERSION={old_version}\n")
-          new_version = os.environ.get('NEW_VERSION', '')
-          print("new version:", new_version)
-          if parse_version(new_version) > parse_version(old_version):
-            content = re.sub(pattern, rf'\1"{new_version}"', content, count=1)
-            with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
-              f.write("FOUND_NEW_VERSION=1\n")
-            with open(file_path, 'w', encoding='utf-8') as file:
-              file.write(content)
-          PY
-
-      - name: Prepare PR body
-        run: |
-          python3 << 'PY'
-          import os
-
-          repo_url = 'https://code.videolan.org/videolan/libbluray'
-          new = os.environ.get('NEW_VERSION', '')
-          pr_body = f"{repo_url}/-/blob/{new}/ChangeLog?ref_type=tags"
-
-          with open('/tmp/PR_BODY.txt', 'w', encoding='utf-8') as f:
-              f.write(pr_body)
-          PY
-
-      - name: Create Pull Request
-        if: env.FOUND_NEW_VERSION
-        uses: peter-evans/create-pull-request@v7
-        with:
-          add-paths: |
-            ./Sources/BuildScripts/XCFrameworkBuild/main.swift
-          title: "bump version to ${{ env.NEW_VERSION }}"
-          body-path: /tmp/PR_BODY.txt
-          commit-message: "chore: bump version to ${{ env.NEW_VERSION }}"
+    uses: mpvkit/BuildShared/.github/workflows/check_version.yml@main
+    secrets: inherit
+    with:
+      repository: 'https://code.videolan.org/videolan/libbluray.git'
+      library: 'libbluray'
+      pr_body: |
+        {REPOSITORY_URL}/-/blob/{NEW_VERSION}/ChangeLog?ref_type=tags
