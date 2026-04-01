@@ -20,13 +20,16 @@ jobs:
           cd ./latest_code
           git fetch --tags --quiet
 
-      - name: Get latest verion
+      - name: Get latest version
         run: |
           cd ./latest_code
-          latest_tag=$(git tag --sort=-v:refname | grep -v "-" | grep -v "_" | head -n 1)
+          latest_tag=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+          if [ -z "$latest_tag" ]; then
+            echo "No stable tag found in upstream repository"
+            exit 1
+          fi
           echo "latest tag: $latest_tag"
           echo "NEW_VERSION=$latest_tag" >> $GITHUB_ENV
-          rm -rf ../latest_code
 
       - name: update to new version
         run: |
@@ -35,21 +38,28 @@ jobs:
           import os
 
           def parse_version(ver):
-            if '-' in ver or ver == '':
-              return 0
-            return int(re.sub(r'[^0-9]+', r'', ver))
+            if ver is None:
+              raise ValueError("invalid version: None")
+            match = re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)', ver)
+            if match is None:
+              raise ValueError(f"invalid version: {ver!r}")
+            return tuple(int(part) for part in match.groups())
 
           file_path = './Sources/BuildScripts/XCFrameworkBuild/main.swift'
           with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
-          oldVersion = re.search(r'(case .libbluray[^\"]+?)"(.+?)"', content).group(2)
-          print("old version:", oldVersion)
+          pattern = r'(case\s+\.libbluray:\s*return\s+)"([^"]+)"'
+          match = re.search(pattern, content)
+          if match is None:
+            raise RuntimeError(f"failed to find version with pattern {pattern!r} in {file_path}")
+          old_version = match.group(2)
+          print("old version:", old_version)
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
-            f.write(f"OLD_VERSION={oldVersion}\n")
-          newVersion = os.environ.get('NEW_VERSION', '')
-          print("new version:", newVersion)
-          if parse_version(newVersion) > parse_version(oldVersion):
-            content = re.sub(r'(case .libbluray[^\"]+?)"(.+?)"', rf'\1"{newVersion}"', content, count=1)
+            f.write(f"OLD_VERSION={old_version}\n")
+          new_version = os.environ.get('NEW_VERSION', '')
+          print("new version:", new_version)
+          if parse_version(new_version) > parse_version(old_version):
+            content = re.sub(pattern, rf'\1"{new_version}"', content, count=1)
             with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
               f.write("FOUND_NEW_VERSION=1\n")
             with open(file_path, 'w', encoding='utf-8') as file:
