@@ -7,7 +7,7 @@ let package = Package(
     platforms: [.macOS(.v11), .iOS(.v14), .tvOS(.v14)],
     products: [
         .library(
-            name: "Libbluray",
+            name: "libbluray",
             targets: ["_Libbluray"]
         ),
     ],
